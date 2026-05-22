@@ -1,0 +1,24 @@
+# Data (large files)
+data/raw/
+data/processed/
+*.h5
+*.hdf5
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model checkpoints
+results/checkpoints/
+*.pth
+*.pt
+
+# OS
+.DS_Store
