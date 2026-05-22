@@ -50,6 +50,36 @@ CS131-Project/
 pip install -r requirements.txt
 ```
 
+## Running the Notebook Code as Python Scripts
+
+The notebook cells are useful, but they should live as experiment scripts that call the reusable code in `src/`.
+
+1. Put the PCam HDF5 files in `data/raw/`, or add `--download` to the commands below to let torchvision download PCam.
+2. Make the example/preprocessing figures:
+
+```bash
+python scripts/make_figures.py --num-samples 1000 --download
+```
+
+This saves:
+- `results/figure1_pcam_examples.png`
+- `results/figure2_preprocessing_pipeline.png`
+
+3. Train and evaluate the handcrafted-feature SVM:
+
+```bash
+python scripts/train_svm.py --num-samples 1000 --download
+```
+
+This saves:
+- `results/figure3_svm_confusion_matrix.png`
+
+The corresponding reusable project code lives in:
+- `src/data/pcam.py` for loading PCam data
+- `src/preprocessing/pipeline.py` for normalization and Gaussian smoothing
+- `src/features/handcrafted.py` for HOG, edge, color, and LBP features
+- `src/evaluation/metrics.py` for scores and plots
+
 ## Timeline
 
 | Week | Goals |

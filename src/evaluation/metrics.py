@@ -20,7 +20,7 @@ def compute_metrics(y_true, y_pred, y_prob=None):
     return metrics
 
 
-def plot_confusion_matrix(y_true, y_pred, title='Confusion Matrix', save_path=None):
+def plot_confusion_matrix(y_true, y_pred, title='Confusion Matrix', save_path=None, show=True):
     cm = confusion_matrix(y_true, y_pred)
     disp = ConfusionMatrixDisplay(cm, display_labels=['Normal', 'Cancer'])
     fig, ax = plt.subplots()
@@ -28,7 +28,10 @@ def plot_confusion_matrix(y_true, y_pred, title='Confusion Matrix', save_path=No
     ax.set_title(title)
     if save_path:
         plt.savefig(save_path, bbox_inches='tight')
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
 
 
 def plot_roc_curve(y_true, y_prob, title='ROC Curve', save_path=None):

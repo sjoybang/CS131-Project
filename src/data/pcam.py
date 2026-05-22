@@ -14,7 +14,25 @@ _FILES = {
 }
 
 
-def load_split_numpy(split="train", data_dir=None, max_samples=None):
+def _load_split_from_torchvision(split, data_dir, max_samples):
+    """Download/load PCam through torchvision and return numpy arrays."""
+    from torchvision.datasets import PCAM
+
+    torchvision_split = "val" if split == "valid" else split
+    dataset = PCAM(root=str(data_dir), split=torchvision_split, download=True)
+    n_samples = len(dataset) if max_samples is None else min(max_samples, len(dataset))
+
+    X = []
+    y = []
+    for idx in range(n_samples):
+        image, label = dataset[idx]
+        X.append(np.asarray(image))
+        y.append(label)
+
+    return np.asarray(X, dtype=np.uint8), np.asarray(y, dtype=int)
+
+
+def load_split_numpy(split="train", data_dir=None, max_samples=None, download=False):
     """Load a PCam split as numpy arrays (uint8 images, int labels).
 
     Returns:
@@ -23,6 +41,10 @@ def load_split_numpy(split="train", data_dir=None, max_samples=None):
     """
     root = Path(data_dir) if data_dir else DATA_DIR
     x_file, y_file = _FILES[split]
+
+    if download and not (root / x_file).exists():
+        return _load_split_from_torchvision(split, root, max_samples)
+
     with h5py.File(root / x_file, "r") as fx, h5py.File(root / y_file, "r") as fy:
         X = fx["x"][:max_samples]          # (N, 96, 96, 3) uint8
         y = fy["y"][:max_samples, 0, 0, 0] # stored as (N, 1, 1, 1)
