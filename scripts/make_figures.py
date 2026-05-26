@@ -9,8 +9,9 @@ import sys
 
 import argparse
 import matplotlib.pyplot as plt
+import numpy as np
 from skimage.color import rgb2gray
-from skimage.feature import canny
+from skimage.feature import canny, hog, local_binary_pattern
 from skimage.filters import gaussian, sobel
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -41,15 +42,45 @@ def plot_preprocessing_pipeline(image, save_path):
     blurred = gaussian(gray, sigma=1)
     sobel_edges = sobel(blurred)
     canny_edges = canny(blurred, sigma=1)
+    _, hog_image = hog(
+        (gray * 255).astype("uint8"),
+        pixels_per_cell=(8, 8),
+        cells_per_block=(2, 2),
+        visualize=True,
+        feature_vector=True,
+    )
+    lbp_image = local_binary_pattern(
+        (gray * 255).astype("uint8"),
+        P=8,
+        R=1,
+        method="uniform",
+    )
 
-    images = [image_float, gray, blurred, sobel_edges, canny_edges]
-    titles = ["Original", "Grayscale", "Gaussian Blur", "Sobel Edges", "Canny Edges"]
+    image_panels = [
+        (image_float, "Original", None),
+        (gray, "Grayscale", "gray"),
+        (blurred, "Gaussian Blur", "gray"),
+        (sobel_edges, "Sobel Edges", "gray"),
+        (canny_edges, "Canny Edges", "gray"),
+        (hog_image, "HOG", "gray"),
+        (lbp_image, "LBP Texture", "gray"),
+    ]
 
-    fig, axes = plt.subplots(1, 5, figsize=(15, 4))
-    for ax, panel, title in zip(axes, images, titles):
-        ax.imshow(panel, cmap=None if title == "Original" else "gray")
+    fig, axes = plt.subplots(1, 8, figsize=(24, 4))
+    for ax, (panel, title, cmap) in zip(axes[:7], image_panels):
+        ax.imshow(panel, cmap=cmap)
         ax.set_title(title)
         ax.axis("off")
+
+    colors = ["red", "green", "blue"]
+    ax = axes[7]
+    for channel, color in enumerate(colors):
+        hist, bin_edges = np.histogram(image_float[:, :, channel], bins=16, range=(0, 1))
+        ax.plot(bin_edges[:-1], hist / hist.sum(), color=color, linewidth=2)
+    ax.set_title("RGB Histograms")
+    ax.set_xlabel("Intensity")
+    ax.set_ylabel("Frequency")
+    ax.set_xlim(0, 1)
 
     plt.tight_layout()
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
