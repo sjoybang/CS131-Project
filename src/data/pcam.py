@@ -60,8 +60,13 @@ class PCamDataset(Dataset):
         max_samples: cap the dataset size (useful for quick experiments)
     """
 
-    def __init__(self, split="train", transform=None, data_dir=None, max_samples=None):
-        self.X, self.y = load_split_numpy(split, data_dir=data_dir, max_samples=max_samples)
+    def __init__(self, split="train", transform=None, data_dir=None, max_samples=None, download=False):
+        self.X, self.y = load_split_numpy(
+            split,
+            data_dir=data_dir,
+            max_samples=max_samples,
+            download=download,
+        )
         self.transform = transform
 
     def __len__(self):

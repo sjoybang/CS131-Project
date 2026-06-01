@@ -45,11 +45,13 @@ def main():
         transform=get_default_transforms("train"),
         data_dir=args.data_dir,
         max_samples=args.num_samples,
+        download=args.download,
     )
     valid_dataset = PCamDataset(
         split="valid",
         transform=get_default_transforms("valid"),
         data_dir=args.data_dir,
+        download=args.download,
     )
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=2)
