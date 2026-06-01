@@ -16,17 +16,26 @@ _FILES = {
 
 def _resolve_split_root(root, x_file, y_file):
     """Find manually placed files or torchvision's root/pcam download folder."""
-    if (root / x_file).exists() and (root / y_file).exists():
+    if _split_exists(root, x_file, y_file):
         return root
     return root / "pcam"
 
 
-def _load_split_from_torchvision(split, data_dir, max_samples):
-    """Download/load PCam through torchvision and return numpy arrays."""
+def _split_exists(root, x_file, y_file):
+    return (root / x_file).exists() and (root / y_file).exists()
+
+
+def _get_torchvision_dataset(split, data_dir):
+    """Download/load a PCam split through torchvision."""
     from torchvision.datasets import PCAM
 
     torchvision_split = "val" if split == "valid" else split
-    dataset = PCAM(root=str(data_dir), split=torchvision_split, download=True)
+    return PCAM(root=str(data_dir), split=torchvision_split, download=True)
+
+
+def _load_split_from_torchvision(split, data_dir, max_samples):
+    """Download/load PCam through torchvision and return numpy arrays."""
+    dataset = _get_torchvision_dataset(split, data_dir)
     n_samples = len(dataset) if max_samples is None else min(max_samples, len(dataset))
 
     X = []
@@ -50,7 +59,7 @@ def load_split_numpy(split="train", data_dir=None, max_samples=None, download=Fa
     x_file, y_file = _FILES[split]
     split_root = _resolve_split_root(root, x_file, y_file)
 
-    if download and not (split_root / x_file).exists():
+    if download and not _split_exists(split_root, x_file, y_file):
         return _load_split_from_torchvision(split, root, max_samples)
 
     with h5py.File(split_root / x_file, "r") as fx, h5py.File(split_root / y_file, "r") as fy:
@@ -66,27 +75,39 @@ class PCamDataset(Dataset):
         split: "train", "valid", or "test"
         transform: torchvision transforms applied to each PIL/tensor image
         max_samples: cap the dataset size (useful for quick experiments)
+        download: download the split through torchvision if it is missing
     """
 
     def __init__(self, split="train", transform=None, data_dir=None, max_samples=None, download=False):
-        self.X, self.y = load_split_numpy(
-            split,
-            data_dir=data_dir,
-            max_samples=max_samples,
-            download=download,
-        )
+        root = Path(data_dir) if data_dir else DATA_DIR
+        x_file, y_file = _FILES[split]
+        split_root = _resolve_split_root(root, x_file, y_file)
+
+        if download and not _split_exists(split_root, x_file, y_file):
+            _get_torchvision_dataset(split, root)
+            split_root = _resolve_split_root(root, x_file, y_file)
+
+        self.x_path = split_root / x_file
+        self.y_path = split_root / y_file
+        with h5py.File(self.x_path, "r") as fx:
+            total_samples = fx["x"].shape[0]
+        self.num_samples = total_samples if max_samples is None else min(max_samples, total_samples)
         self.transform = transform
 
     def __len__(self):
-        return len(self.y)
+        return self.num_samples
 
     def __getitem__(self, idx):
         from PIL import Image
         import torch
-        img = Image.fromarray(self.X[idx])
+
+        with h5py.File(self.x_path, "r") as fx:
+            img = Image.fromarray(fx["x"][idx])
+        with h5py.File(self.y_path, "r") as fy:
+            label = int(fy["y"][idx, 0, 0, 0])
         if self.transform:
             img = self.transform(img)
-        return img, torch.tensor(self.y[idx], dtype=torch.long)
+        return img, torch.tensor(label, dtype=torch.long)
 
 
 def get_default_transforms(split="train"):
