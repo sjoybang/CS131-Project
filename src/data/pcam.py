@@ -14,6 +14,13 @@ _FILES = {
 }
 
 
+def _resolve_split_root(root, x_file, y_file):
+    """Find manually placed files or torchvision's root/pcam download folder."""
+    if (root / x_file).exists() and (root / y_file).exists():
+        return root
+    return root / "pcam"
+
+
 def _load_split_from_torchvision(split, data_dir, max_samples):
     """Download/load PCam through torchvision and return numpy arrays."""
     from torchvision.datasets import PCAM
@@ -41,11 +48,12 @@ def load_split_numpy(split="train", data_dir=None, max_samples=None, download=Fa
     """
     root = Path(data_dir) if data_dir else DATA_DIR
     x_file, y_file = _FILES[split]
+    split_root = _resolve_split_root(root, x_file, y_file)
 
-    if download and not (root / x_file).exists():
+    if download and not (split_root / x_file).exists():
         return _load_split_from_torchvision(split, root, max_samples)
 
-    with h5py.File(root / x_file, "r") as fx, h5py.File(root / y_file, "r") as fy:
+    with h5py.File(split_root / x_file, "r") as fx, h5py.File(split_root / y_file, "r") as fy:
         X = fx["x"][:max_samples]          # (N, 96, 96, 3) uint8
         y = fy["y"][:max_samples, 0, 0, 0] # stored as (N, 1, 1, 1)
     return X, y.astype(int)
